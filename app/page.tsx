@@ -3,51 +3,22 @@
 import Loader from "@/components/Loader";
 import SearchBar from "@/components/searchbar";
 import WeatherFeed from "@/components/weatherfeed";
-import { WeatherDetails } from "@/utils/type";
+import { AppDispatch, RootState } from "@/redux/store";
+import { fetchWeather } from "@/redux/weatherSlice";
 import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 export default function Home() {
-	const [coordinates, setCoordinates] = useState<{
-		lat: number | null;
-		long: number | null;
-	}>({
-		lat: null,
-		long: null,
-	});
-	const [weatherData, setWeatherData] = useState<WeatherDetails | {}>({});
-
 	const [loading, setLoading] = useState(true);
-	const apiKey = "96fda65f5f9830cd4a5c8fa63f881f85";
-
-	const fetchWeatherData = async () => {
-		setLoading(true);
-		try {
-			const res = await fetch(
-				`https://www.weatherunion.com/gw/weather/external/v0/get_weather_data?latitude=${coordinates.lat}&longitude=${coordinates.long}`,
-				{
-					headers: {
-						"X-Zomato-Api-Key": apiKey,
-					},
-				},
-			);
-			const data = await res.json();
-			setWeatherData(data);
-		} catch (error) {
-			console.log(error);
-		} finally {
-			setLoading(false);
-		}
-	};
+	const { data, loading: loading2, error, location } = useSelector((state: RootState) => state.weather);
+	const dispatch = useDispatch<AppDispatch>();
 
 	const fetchData = async () => {
 		navigator.geolocation.getCurrentPosition(
 			(position) => {
+				console.log(position);
 				const { latitude, longitude } = position.coords;
-
-				setCoordinates({
-					lat: latitude,
-					long: longitude,
-				});
+				dispatch(fetchWeather({ latitude, longitude }));
 				setLoading(false);
 			},
 			(err) => {
@@ -61,29 +32,27 @@ export default function Home() {
 		fetchData();
 	}, []);
 
-	useEffect(() => {
-		if (coordinates.lat && coordinates.long) {
-			setLoading(true);
-			fetchWeatherData();
-		}
-	}, [coordinates]);
-
 	return (
-		<main className="min-h-screen max-w-3xl mx-auto">
+		<main className="min-h-screen max-w-3xl mx-auto px-5 pb-20">
 			<div className="absolute inset-0 -z-10 h-full w-full bg-white bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]">
-				<div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-fuchsia-400 opacity-20 blur-[100px]"></div>
+				<div className="absolute left-0 right-0 top-0 -z-10 m-auto h-full sm:h-[510px] w-full rounded-full bg-fuchsia-300 opacity-20 blur-[100px]"></div>
 			</div>
-			<header className="py-10">
-				<SearchBar />
+			<header className="pt-5 pb-10 text-center">
+				<h1 className="text-center text-2xl font-extrabold bg-gradient-to-r from-fuchsia-600 via-pink-500 to-red-400 inline-block text-transparent bg-clip-text">
+					WeatherWhiz
+				</h1>
+				<div className="mt-6 md:mt-10 ">
+					<SearchBar />
+				</div>
 			</header>
 
-			<section className="mt-10">
-				{loading ? (
+			<section className="mt-0 md:mt-5">
+				{loading || loading2 ? (
 					<div className="w-full flex justify-center pt-5">
 						<Loader className="!w-10 !h-10" />
 					</div>
-				) : Object.keys(weatherData)?.length > 0 ? (
-					<WeatherFeed weatherData={weatherData} />
+				) : data && Object.keys(data?.locality_weather_data)?.length > 0 ? (
+					<WeatherFeed weatherData={data.locality_weather_data} location={location} />
 				) : (
 					<p className="text-xl text-center leading-4 font-medium text-muted-foreground">
 						No Weather Information. <br />

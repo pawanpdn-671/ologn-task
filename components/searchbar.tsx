@@ -1,9 +1,11 @@
 "use client";
 
 import { useDebounce } from "@/hooks/useDebouce";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { AppDispatch } from "@/redux/store";
+import { fetchWeather, setLocation } from "@/redux/weatherSlice";
 import { Location } from "@/utils/type";
+import { useEffect, useRef, useState } from "react";
+import { useDispatch } from "react-redux";
 import Loader from "./Loader";
 
 const SearchBar = () => {
@@ -12,9 +14,9 @@ const SearchBar = () => {
 	const [loading, setLoading] = useState<boolean>(false);
 	const [searchResults, setSearchResults] = useState<Location[]>([]);
 
-	const router = useRouter();
 	const popupRef = useRef<HTMLDivElement>(null);
-	const debounceInput = useDebounce(searchQuery, 300);
+	const debounceInput = useDebounce(searchQuery, 500);
+	const dispatch = useDispatch<AppDispatch>();
 
 	const fetchLocationList = async (input: string) => {
 		try {
@@ -54,12 +56,14 @@ const SearchBar = () => {
 		};
 	}, []);
 
-	const handleCityClick = (id: string) => {
-		router.push(`/weather/${id}`);
+	const handleCityClick = (id: string, local: string, city: string) => {
+		dispatch(fetchWeather({ locationId: id }));
+		dispatch(setLocation(`${local}, ${city}`));
+		setSearchQuery("");
 	};
 
 	return (
-		<div className="w-[600px] mx-auto relative">
+		<div className="w-full md:w-[600px] mx-auto relative">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				width="20"
@@ -73,8 +77,9 @@ const SearchBar = () => {
 			<input
 				id={"search-place"}
 				type={"text"}
+				value={searchQuery}
 				className={
-					"h-[50px] w-full rounded-full border hover:border-indigo-300 border-slate-400 pl-[50px] pr-5 outline-none focus:border-indigo-400 focus:border-2 transition-all"
+					"h-[50px] w-full rounded-full border hover:border-fuchsia-300 border-slate-300 pl-[50px] pr-5 outline-none focus:border-fuchsia-200 focus:border-2 transition-all"
 				}
 				onFocus={() => setShowSearchSuggestion(true)}
 				onChange={(e) => setSearchQuery(e.target.value)}
@@ -89,9 +94,11 @@ const SearchBar = () => {
 						<ul className="text-sm list-none no-underline font-normal">
 							{searchResults?.map((location, index) => (
 								<li
-									className="cursor-pointer py-2 px-4 hover:bg-zinc-100 hover:text-indigo-500 transition-all"
+									className="text-left cursor-pointer py-2 px-4 hover:bg-fuchsia-50 hover:text-fuchsia-500 transition-all"
 									key={location.localityId}
-									onClick={() => handleCityClick(location.localityId)}>
+									onClick={() =>
+										handleCityClick(location.localityId, location.localityName, location.cityName)
+									}>
 									{location.localityName}, {location.cityName}
 								</li>
 							))}
